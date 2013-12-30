@@ -1,0 +1,23 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+
+    <title>KOIs</title>
+
+</head>
+<body>
+
+<ul>
+    {% for koi in kois %}
+    <li><a href="{{ url_for('koi', koi_name=koi.kepoi_name) }}">{{ koi.kepoi_name }}</a>
+    —
+    {% if not koi.submitted %}
+    <a href="{{ url_for('submit', koi_name=koi.kepoi_name) }}">Submit</a>
+    {% endif %}
+    </li>
+    {% endfor %}
+</ul>
+
+</body>
+</html>

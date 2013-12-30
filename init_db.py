@@ -4,27 +4,26 @@
 from __future__ import (division, print_function, absolute_import,
                         unicode_literals)
 
-import os
+import sys
+import kplr
 import sqlite3
 
-with sqlite3.connect(os.path.join("kois_web", "static", "kois.db")) as conn:
+if len(sys.argv) != 2:
+    print("Provide a database path")
+    sys.exit(1)
+
+# Get the KOI listing from the Exoplanet Archive.
+client = kplr.API()
+kois = client.kois(where="koi_pdisposition+like+'CANDIDATE'")
+
+with sqlite3.connect(sys.argv[1]) as conn:
     c = conn.cursor()
-
-    # Require foreign keys for references.
-    c.execute("PRAGMA foreign_keys = ON")
-
-    c.execute("""CREATE TABLE IF NOT EXISTS groups(
+    c.execute("DROP TABLE IF EXISTS kois")
+    c.execute("""CREATE TABLE kois(
             id integer primary key,
-            name text
-        )""")
-
-    c.execute("""CREATE TABLE IF NOT EXISTS kois(
-            id integer primary key,
-            group_id integer references groups(id),
-            koi_name text,
+            kepoi_name text,
             kepid integer,
-            disposition text,
-            koi_kepmag real,
+            koi_disposition text,
             koi_period real,
             koi_period_err1 real,
             koi_period_err2 real,
@@ -62,7 +61,7 @@ with sqlite3.connect(os.path.join("kois_web", "static", "kois.db")) as conn:
             map_impact real,
             kplr_fstar real,
             kplr_fstar_err1 real,
-            kplr_fstar_err1 real,
+            kplr_fstar_err2 real,
             kplr_q1 real,
             kplr_q1_err1 real,
             kplr_q1_err2 real,
@@ -85,3 +84,15 @@ with sqlite3.connect(os.path.join("kois_web", "static", "kois.db")) as conn:
             kplr_impact_err1 real,
             kplr_impact_err2 real
         )""")
+
+    columns = ["kepoi_name", "kepid", "koi_disposition",
+               "koi_period", "koi_period_err1", "koi_period_err2",
+               "koi_time0bk", "koi_time0bk_err1", "koi_time0bk_err2",
+               "koi_ror", "koi_ror_err1", "koi_ror_err2", "koi_impact",
+               "koi_impact_err1", "koi_impact_err2", "koi_duration",
+               "koi_duration_err1", "koi_duration_err2", "koi_steff",
+               "koi_steff_err1", "koi_steff_err2"]
+    c.executemany("INSERT INTO kois({0}) VALUES ({1})"
+                  .format(",".join(columns),
+                          ",".join(["?" for i in range(len(columns))])),
+                  [map(lambda c: getattr(k, c), columns) for k in kois])
